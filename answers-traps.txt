@@ -1,0 +1,46 @@
+Which registers contain arguments to functions? For example, which register holds 13 in main's call to printf?
+在汇编代码中，我们可以看到
+
+void main(void) {
+.....
+24:	4635                	li	a2,13
+.....
+}
+
+a0-a7,则可以得到13在a2寄存器中
+
+Where is the call to function f in the assembly code for main? Where is the call to g? (Hint: the compiler may inline functions.)
+
+我没有在汇编代码中找到调用f与g函数的代码，根据提示与已有知识f与g函数有关代码是被内联了
+
+At what address is the function printf located?
+在汇编代码中有
+34:	5f8080e7          	jalr	1528(ra) # 628 <printf>
+对应的后面有这样一段代码
+0000000000000628 <printf>:
+
+void
+printf(const char *fmt, ...)
+{
+ 628:	711d                	addi	sp,sp,-96
+.....
+所以可得到这道题的答案为0x628
+
+What value is in the register ra just after the jalr to printf in main?
+根据文档，ra存储的是返回的地址，在跳转printf之后会执行下一条汇编代码，即0x38
+
+
+
+Run the following code.
+	unsigned int i = 0x00646c72;
+	printf("H%x Wo%s", 57616, &i);
+      
+What is the output? Here's an ASCII table that maps bytes to characters.
+The output depends on that fact that the RISC-V is little-endian. If the RISC-V were instead big-endian what would you set i to in order to yield the same output? Would you need to change 57616 to a different value?
+在大端序的机器中i需要被设置成0x726c6400; 57616与不需要修改
+
+In the following code, what is going to be printed after 'y='? (note: the answer is not a specific value.) Why does this happen?
+
+	printf("x=%d y=%d", 3);
+
+可以看到这句printf中缺少了一个参数，所以y输出的是当时在a2寄存器中的值，是随机不确定的
