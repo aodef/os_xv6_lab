@@ -102,7 +102,24 @@ e1000_transmit(struct mbuf *m)
   // the TX descriptor ring so that the e1000 sends it. Stash
   // a pointer so that it can be freed after sending.
   //
-  
+  acquire(&e1000_lock); //上锁，防止多进程竞争
+
+  uint32 next_ind = regs[E1000_TDT];
+  if(!(tx_ring[next_ind].status & E1000_TXD_STAT_DD)){
+       release(&e1000_lock);
+       return -1;
+  }
+  if(tx_mbufs[next_ind])
+      mbuffree(tx_mbufs[next_ind]); //释放从该描述符传输的最后一个 mbuf（如果有）
+  //填写发送的内存地址与长度
+  tx_ring[next_ind].addr = (uint64)m->head;
+  tx_ring[next_ind].length = (uint16)m->len;
+  //设置cmd标志
+  tx_ring[next_ind].cmd = E1000_TXD_CMD_RS | E1000_TXD_CMD_EOP;
+  tx_mbufs[next_ind] = m;
+  //环形缓冲区下标加一
+  regs[E1000_TDT] = (next_ind+1) % TX_RING_SIZE;
+  release(&e1000_lock);
   return 0;
 }
 
@@ -115,6 +132,23 @@ e1000_recv(void)
   // Check for packets that have arrived from the e1000
   // Create and deliver an mbuf for each packet (using net_rx()).
   //
+  while(1) { 
+
+    uint32 next_ind = (regs[E1000_RDT] + 1) % RX_RING_SIZE;
+    //检查新数据包是否可用
+    if(!(rx_ring[next_ind].status & E1000_RXD_STAT_DD)) {
+      return;
+    }
+    rx_mbufs[next_ind]->len =rx_ring[next_ind].length;
+    //传递到网络堆栈
+    net_rx(rx_mbufs[next_ind]); 
+    // 分配一个新的 mbuf
+    rx_mbufs[next_ind] = mbufalloc(0); 
+    rx_ring[next_ind].addr = (uint64)rx_mbufs[next_ind]->head;
+    rx_ring[next_ind].status = 0;
+
+    regs[E1000_RDT] = next_ind;
+  }
 }
 
 void
