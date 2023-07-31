@@ -21,12 +21,17 @@ struct run {
 struct {
   struct spinlock lock;
   struct run *freelist;
-} kmem;
+} kmem[NCPU];//每一个核一个freelist
 
 void
 kinit()
 {
-  initlock(&kmem.lock, "kmem");
+  // initlock(&kmem.lock, "kmem");
+  for (int i = 0; i < NCPU; i++) {
+    char name[9] = {0};
+    snprintf(name, 8, "kmem-%d", i);
+    initlock(&kmem[i].lock, name);
+  }
   freerange(end, (void*)PHYSTOP);
 }
 
@@ -52,14 +57,39 @@ kfree(void *pa)
     panic("kfree");
 
   // Fill with junk to catch dangling refs.
+  push_off();
+  int cpu = cpuid();
   memset(pa, 1, PGSIZE);
 
   r = (struct run*)pa;
 
-  acquire(&kmem.lock);
-  r->next = kmem.freelist;
-  kmem.freelist = r;
-  release(&kmem.lock);
+  // acquire(&kmem.lock);
+  // r->next = kmem.freelist;
+  // kmem.freelist = r;
+  // release(&kmem.lock);
+  acquire(&kmem[cpu].lock);
+  r->next = kmem[cpu].freelist;
+  kmem[cpu].freelist = r;
+  release(&kmem[cpu].lock);
+  pop_off();
+}
+
+void *
+kfind_vld(int cpu) {
+  struct run *r;
+  for (int i = 1; i < NCPU; i++) {
+    int next_cpu = (cpu + i) % NCPU;
+    acquire(&kmem[next_cpu].lock);
+    r = kmem[next_cpu].freelist;
+    if (r) {
+      kmem[next_cpu].freelist = r->next;
+    }
+    release(&kmem[next_cpu].lock);
+    if (r) {//找到了就退出，未找到就继续向下一个页面找
+      break;
+    }
+  }
+  return r;
 }
 
 // Allocate one 4096-byte page of physical memory.
@@ -70,13 +100,25 @@ kalloc(void)
 {
   struct run *r;
 
-  acquire(&kmem.lock);
-  r = kmem.freelist;
-  if(r)
-    kmem.freelist = r->next;
-  release(&kmem.lock);
+  push_off();
+  int cpu = cpuid();
 
+  // acquire(&kmem.lock);
+  // r = kmem.freelist;
+  // if(r)
+  //   kmem.freelist = r->next;
+  // release(&kmem.lock);
+  acquire(&kmem[cpu].lock);
+  r = kmem[cpu].freelist;
+  if (r) {
+    kmem[cpu].freelist = r->next;
+  }
+  release(&kmem[cpu].lock);
+  if (r == 0) {
+    r = kfind_vld(cpu);//当前cpu没有空闲内存页，向其他cpu借
+  }
   if(r)
     memset((char*)r, 5, PGSIZE); // fill with junk
+  pop_off();
   return (void*)r;
 }
