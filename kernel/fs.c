@@ -400,7 +400,7 @@ bmap(struct inode *ip, uint bn)
     brelse(bp);
     return addr;
   }
-
+  
   panic("bmap: out of range");
 }
 
@@ -431,6 +431,7 @@ itrunc(struct inode *ip)
     bfree(ip->dev, ip->addrs[NDIRECT]);
     ip->addrs[NDIRECT] = 0;
   }
+  
 
   ip->size = 0;
   iupdate(ip);
