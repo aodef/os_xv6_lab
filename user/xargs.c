@@ -16,8 +16,9 @@ int main(int argc,char* argv[]){
 	char c,*p = buf;
 	while(read(0,&c,1) != 0){
 		if(c == '\n'){
+			//如果是换行符则开一个子进程执行命令
 			*p = '\0';
-			nargv[i-1] = buf;
+			nargv[i-1] = buf;//作为参数传入
 			if(fork() == 0){
 				exec(nargv[0],nargv);
 				exit(0);

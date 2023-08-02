@@ -9,12 +9,10 @@ fmtname(char *path)
   static char buf[DIRSIZ+1];
   char *p;
 
-  // Find first character after last slash.
   for(p=path+strlen(path); p >= path && *p != '/'; p--)
     ;
   p++;
 
-  // Return blank-padded name.
   if(strlen(p) >= DIRSIZ)
     return p;
   memmove(buf, p, strlen(p));
@@ -22,10 +20,11 @@ fmtname(char *path)
   return buf;
 }
 
-int is_resurve(char *path)
+int is_resurve(char *path)//判断是否还要递归
 {
     char * name;
     name=fmtname(path);
+    //如果是 . 或者 .. 就不要递归了
     if((name[0]=='.'&&name[1]=='\0')||(name[0]=='.'&&name[1]=='.'&&name[2]=='\0')){
         return 0;
     }
@@ -52,13 +51,13 @@ find(char *path,char *target)
   }
 
   switch(st.type){
-  case T_FILE:
+  case T_FILE://如果是文件
     if(strcmp(fmtname(path),target)==0){
         printf("%s\n",path);
     }
     break;
 
-  case T_DIR:
+  case T_DIR://如果是文件夹
     if(strlen(path) + 1 + DIRSIZ + 1 > sizeof buf){
       printf("ls: path too long\n");
       break;
@@ -76,7 +75,7 @@ find(char *path,char *target)
         continue;
       }
       if(is_resurve(buf)){
-        find(buf,target);
+        find(buf,target);//进一步递归调用fiind函数
       }
     }
     break;
