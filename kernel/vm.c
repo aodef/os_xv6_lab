@@ -451,6 +451,7 @@ void vmprint(pagetable_t pagetable, uint64 depth)
   if(depth==2){
     dep=".. .. ..";
   }
+ 
   for(int i = 0; i < 512; i++){
     pte_t pte = pagetable[i];
     if(pte & PTE_V){
