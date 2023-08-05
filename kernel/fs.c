@@ -402,8 +402,8 @@ bmap(struct inode *ip, uint bn)
   }
   
   bn -= NINDIRECT;
-  if(bn < NINDIRECT * NINDIRECT) { // doubly-indirect
-    // Load indirect block, allocating if necessary.
+  if(bn < NINDIRECT * NINDIRECT) { 
+     // 检查是否已经分配了第一个间接块
     if((addr = ip->addrs[NDIRECT+1]) == 0)
       ip->addrs[NDIRECT+1] = addr = balloc(ip->dev);
     bp = bread(ip->dev, addr);
@@ -413,9 +413,11 @@ bmap(struct inode *ip, uint bn)
       log_write(bp);
     }
     brelse(bp);
+    // 计算在第二级间接块中的偏移
     bn %= NINDIRECT;
     bp = bread(ip->dev, addr);
     a = (uint*)bp->data;
+    // 检查在第二级间接块中是否已经分配了目标数据块
     if((addr = a[bn]) == 0){
       a[bn] = addr = balloc(ip->dev);
       log_write(bp);
@@ -458,13 +460,15 @@ itrunc(struct inode *ip)
   if(ip->addrs[NDIRECT+1]){
     bp = bread(ip->dev, ip->addrs[NDIRECT+1]);
     a = (uint*)bp->data;
+     // 遍历第一级间接块中的每个地址
     for(j = 0; j < NINDIRECT; j++){
       if(a[j]) {
         struct buf *bp2 = bread(ip->dev, a[j]);
         uint *a2 = (uint*)bp2->data;
+        // 遍历第二级间接块中的每个地址
         for(int k = 0; k < NINDIRECT; k++){
           if(a2[k])
-            bfree(ip->dev, a2[k]);
+            bfree(ip->dev, a2[k]);// 释放数据块
         }
         brelse(bp2);
         bfree(ip->dev, a[j]);
