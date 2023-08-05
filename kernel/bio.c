@@ -31,10 +31,6 @@
 struct {
   struct spinlock eviction_locks[NBUFMAP_BUCKET];
   struct buf buf[NBUF];
-   // Linked list of all buffers, through prev/next.
-  // Sorted by how recently the buffer was used.
-  // head.next is most recent, head.prev is least.
-  // Hash map: dev and blockno to buf
   struct buf bufmap[NBUFMAP_BUCKET];
   struct spinlock bufmap_locks[NBUFMAP_BUCKET];
 } bcache;

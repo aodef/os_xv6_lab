@@ -63,10 +63,6 @@ kfree(void *pa)
 
   r = (struct run*)pa;
 
-  // acquire(&kmem.lock);
-  // r->next = kmem.freelist;
-  // kmem.freelist = r;
-  // release(&kmem.lock);
   acquire(&kmem[cpu].lock);
   r->next = kmem[cpu].freelist;
   kmem[cpu].freelist = r;
@@ -103,15 +99,10 @@ kalloc(void)
   push_off();
   int cpu = cpuid();
 
-  // acquire(&kmem.lock);
-  // r = kmem.freelist;
-  // if(r)
-  //   kmem.freelist = r->next;
-  // release(&kmem.lock);
   acquire(&kmem[cpu].lock);
-  r = kmem[cpu].freelist;
+  r = kmem[cpu].freelist;// 获取当前CPU核心的内存自由列表中的头部内存块
   if (r) {
-    kmem[cpu].freelist = r->next;
+    kmem[cpu].freelist = r->next;// 移除内存块，将下一个内存块设置为头部
   }
   release(&kmem[cpu].lock);
   if (r == 0) {
