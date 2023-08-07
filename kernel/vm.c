@@ -444,14 +444,20 @@ vmaunmap(pagetable_t pagetable, uint64 va, uint64 nbytes, struct vma *v)
 {
   uint64 a;
   pte_t *pte;
+  // 遍历指定虚拟地址范围内的每个页面
   for(a = va; a < va + nbytes; a += PGSIZE){
+    // 获取虚拟地址 a 对应的页表项
     if((pte = walk(pagetable, a, 0)) == 0)
       panic("sys_munmap: walk");
+    // 检查页表项是否为有效的叶子项
     if(PTE_FLAGS(*pte) == PTE_V)
       panic("sys_munmap: not a leaf");
+    // 如果页表项有效则获取物理地址
     if(*pte & PTE_V){
       uint64 pa = PTE2PA(*pte);
+      // 如果映射是共享的且有数据修改
       if((*pte & PTE_D) && (v->flags & MAP_SHARED)) { 
+        // 执行文件写操作，更新文件内容
         begin_op();
         ilock(v->f->ip);
         uint64 aoff = a - v->vastart; 

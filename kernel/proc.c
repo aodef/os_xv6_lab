@@ -312,8 +312,7 @@ fork(void)
       np->ofile[i] = filedup(p->ofile[i]);
   np->cwd = idup(p->cwd);
 
-  // copy vmas created by mmap.
-  // actual memory page as well as pte will not be copied over.
+  
   for(i = 0; i < NVMA; i++) {
     struct vma *v = &p->vmas[i];
     if(v->valid) {
